@@ -1,10 +1,14 @@
+import tensorflow
+
 from custom.layers import *
 from custom.callback import *
 import params as par
 import sys
-from tensorflow.python import keras
+# from tensorflow.python import keras
+from tensorflow import keras
 import json
-import tensorflow_probability as tfp
+
+# import tensorflow_probability as tfp
 import random
 import utils
 from progress.bar import Bar
@@ -39,6 +43,7 @@ class MusicTransformer(keras.Model):
             self.load_ckpt_file(loader_path)
 
     def call(self, inputs, targets, training=None, eval=None, src_mask=None, trg_mask=None, lookup_mask=None):
+        print(inputs.shape)
         encoder, weight_encoder = self.Encoder(inputs, training=training, mask=src_mask)
         decoder, weights = self.Decoder(
             targets, enc_output=encoder, training=training, lookup_mask=lookup_mask, mask=trg_mask
@@ -273,10 +278,10 @@ class MusicTransformerDecoder(keras.Model):
             self.vocab_size = vocab_size
             self.dist = dist
 
-        self.Decoder = Encoder(
+        self.decoder = Encoder(
             num_layers=self.num_layer, d_model=self.embedding_dim,
             input_vocab_size=self.vocab_size, rate=dropout, max_len=max_seq)
-        self.fc = keras.layers.Dense(self.vocab_size, activation=None, name='output')
+        self.fc = tensorflow.keras.layers.Dense(self.vocab_size, activation=None, name='output')
 
         self._set_metrics()
 
@@ -284,7 +289,7 @@ class MusicTransformerDecoder(keras.Model):
             self.load_ckpt_file(loader_path)
 
     def call(self, inputs, training=None, eval=None, lookup_mask=None):
-        decoder, w = self.Decoder(inputs, training=training, mask=lookup_mask)
+        decoder, w = self.decoder(inputs, training=training, mask=lookup_mask)
         fc = self.fc(decoder)
         if training:
             return fc
@@ -297,7 +302,7 @@ class MusicTransformerDecoder(keras.Model):
         if self._debug:
             tf.print('sanity:\n', self.sanity_check(x, y, mode='d'), output_stream=sys.stdout)
 
-        x, y = self.__prepare_train_data(x, y)
+        # x, y = self.__prepare_train_data(x, y)
 
         _, _, look_ahead_mask = utils.get_masked_with_pad_tensor(self.max_seq, x, x)
 
@@ -464,7 +469,7 @@ class MusicTransformerDecoder(keras.Model):
                     result = tf.cast(result, tf.int32)
                     decode_array = tf.concat([decode_array, tf.expand_dims(result, -1)], -1)
                 else:
-                    pdf = tfp.distributions.Categorical(probs=result[:, -1])
+                    # pdf = tfp.distributions.Categorical(probs=result[:, -1])
                     result = pdf.sample(1)
                     result = tf.transpose(result, (1, 0))
                     result = tf.cast(result, tf.int32)
@@ -492,19 +497,19 @@ class MusicTransformerDecoder(keras.Model):
             metric.reset_states()
         return
 
-    @staticmethod
-    def __prepare_train_data(x, y):
-        # start_token = tf.ones((y.shape[0], 1), dtype=y.dtype) * par.token_sos
-        # end_token = tf.ones((y.shape[0], 1), dtype=y.dtype) * par.token_eos
-
-        # # method with eos
-        # out_tar = tf.concat([y[:, :-1], end_token], -1)
-        # inp_tar = tf.concat([start_token, y[:, :-1]], -1)
-        # x = tf.concat([start_token, x[:, 2:], end_token], -1)
-
-        # method without eos
-        # x = data.add_noise(x, rate=0.01)
-        return x, y
+    # @staticmethod
+    # def __prepare_train_data(x, y):
+    #     # start_token = tf.ones((y.shape[0], 1), dtype=y.dtype) * par.token_sos
+    #     # end_token = tf.ones((y.shape[0], 1), dtype=y.dtype) * par.token_eos
+    #
+    #     # # method with eos
+    #     # out_tar = tf.concat([y[:, :-1], end_token], -1)
+    #     # inp_tar = tf.concat([start_token, y[:, :-1]], -1)
+    #     # x = tf.concat([start_token, x[:, 2:], end_token], -1)
+    #
+    #     # method without eos
+    #     # x = data.add_noise(x, rate=0.01)
+    #     return x, y
 
 
 if __name__ == '__main__':

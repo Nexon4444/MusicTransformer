@@ -36,7 +36,7 @@
 ## Repository Setting
 ```bash
 $ git clone https://github.com/jason9693/MusicTransformer-tensorflow2.0.git
-$ cd MusicTransformer-tensorflow2.0
+$ cd MusicTransformer
 $ git clone https://github.com/jason9693/midi-neural-processor.git
 $ mv midi-neural-processor midi_processor
 ```

@@ -1,6 +1,6 @@
 import tensorflow as tf
 import math as m
-from tensorflow.python import keras
+from tensorflow import keras
 import numpy as np
 import math
 
@@ -191,6 +191,7 @@ class RelativeGlobalAttention(keras.layers.Layer):
         """
         q = inputs[0]
         q = self.Wq(q)
+        # print(q.shape[0])
         q = tf.reshape(q, (q.shape[0], q.shape[1], self.h, -1))
         q = tf.transpose(q, (0, 2, 1, 3))  # batch, h, seq, dh
 
@@ -296,6 +297,8 @@ class EncoderLayer(keras.layers.Layer):
         ffn_out = self.FFN_suf(ffn_out)
         ffn_out = self.dropout2(ffn_out, training=training)
         out2 = self.layernorm2(out1+ffn_out)
+        # print(f"out2.shape: {out2.shape}")
+        # print(f"w.shape: {w.shape}")
         return out2, w
 
 
@@ -319,7 +322,6 @@ class DecoderLayer(keras.layers.Layer):
         self.dropout3 = keras.layers.Dropout(rate)
 
     def call(self, x, encode_out, mask=None, lookup_mask=None, training=False, w_out=False, **kwargs):
-
         attn_out, aw1 = self.rga([x, x, x], mask=lookup_mask)
         attn_out = self.dropout1(attn_out, training=training)
         out1 = self.layernorm1(attn_out+x)
@@ -362,10 +364,14 @@ class Encoder(keras.layers.Layer):
     def call(self, x, mask=None, training=False):
         weights = []
         # adding embedding and position encoding.
+        # print("type(x): " + str(type(x)))
+        # print(f"x: {x}")
+
         x = self.embedding(x)  # (batch_size, input_seq_len, d_model)
         x *= tf.math.sqrt(tf.cast(self.d_model, tf.float32))
         x = self.pos_encoding(x)
         x = self.dropout(x, training=training)
+        # print(type(x))
         for i in range(self.num_layers):
             x, w = self.enc_layers[i](x, mask, training=training)
             weights.append(w)

@@ -41,7 +41,7 @@ num_layer = args.num_layers
 
 
 # load data
-dataset = Data('dataset/processed')
+dataset = Data('midi_processed_small')
 print(dataset)
 
 
@@ -67,9 +67,11 @@ train_log_dir = 'logs/mt_decoder/'+current_time+'/train'
 eval_log_dir = 'logs/mt_decoder/'+current_time+'/eval'
 train_summary_writer = tf.summary.create_file_writer(train_log_dir)
 eval_summary_writer = tf.summary.create_file_writer(eval_log_dir)
-
+EPOCHS=2
 
 # Train Start
+# history = mt.fit(dataset.slide_seq2seq_batch(batch_size, max_seq), epochs=EPOCHS)
+
 idx = 0
 for e in range(epochs):
     mt.reset_metrics()
