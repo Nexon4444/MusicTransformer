@@ -28,6 +28,7 @@ def preprocess_midi_files_under(midi_root, save_dir):
     out_fmt = '{}-{}.data'
 
     for path in Bar('Processing').iter(midi_paths):
+        path = os.path.normpath(path)
         print(' ', end='[{}]'.format(path), flush=True)
 
         try:
@@ -37,10 +38,12 @@ def preprocess_midi_files_under(midi_root, save_dir):
             return
         except EOFError:
             print('EOF Error')
-
-        with open('{}/{}.pickle'.format(save_dir,path.split('/')[-1]), 'wb') as f:
+        filename = os.path.basename(path)
+        pickle_path = os.path.normpath('{}/{}.pickle'.format(save_dir,filename))
+        with open(pickle_path, 'wb') as f:
             pickle.dump(data, f)
-
+        # with open(pickle_path, 'wb') as f:
+        #     pickle.dump(data, f)
 
 # def _augumentation(seq):
 #     range_note = range(0, processor.RANGE_NOTE_ON+processor.RANGE_NOTE_OFF)

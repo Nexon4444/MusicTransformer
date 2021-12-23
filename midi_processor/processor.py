@@ -117,8 +117,10 @@ def _merge_note(snote_sequence):
                     continue
                 result = pretty_midi.Note(on.velocity, snote.value, on.time, off.time)
                 result_array.append(result)
-            except:
+            except Exception as e:
+                print(str(e))
                 print('info removed pitch: {}'.format(snote.value))
+                print(str(e))
     return result_array
 
 

@@ -2,6 +2,7 @@ from model import MusicTransformer, MusicTransformerDecoder
 from custom.layers import *
 from custom import callback
 import params as par
+from params import *
 from tensorflow.python.keras.optimizer_v2.adam import Adam
 from data import Data
 import utils
@@ -29,7 +30,7 @@ load_path = args.load_path
 mode = args.mode
 beam = args.beam
 length = args.length
-save_path= args.save_path
+save_path = os.path.join(MIDI_GENERATED_DIR, "generated.midi")
 
 
 current_time = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
@@ -50,7 +51,7 @@ else:
     print(">> generate with decoder wise... beam size is {}".format(beam))
     mt = MusicTransformerDecoder(loader_path=load_path)
 
-inputs = encode_midi('dataset/midi/BENABD10.mid')
+inputs = encode_midi('midi_classical/alb_esp1_format0.mid')
 
 
 with gen_summary_writer.as_default():

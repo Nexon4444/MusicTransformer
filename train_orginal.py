@@ -1,4 +1,4 @@
-from model import MusicTransformerDecoder
+from model_orginal import MusicTransformerDecoder
 from custom.layers import *
 from custom import callback
 import params as par
@@ -70,7 +70,7 @@ eval_log_dir = 'logs/mt_decoder/'+current_time+'/eval'
 train_summary_writer = tf.summary.create_file_writer(train_log_dir)
 eval_summary_writer = tf.summary.create_file_writer(eval_log_dir)
 EPOCHS=2
-keras.layers.Embedding(par.vocab_size, d_model)
+
 # Train Start
 # history = mt.fit(dataset.slide_seq2seq_batch(batch_size, max_seq), epochs=EPOCHS)
 

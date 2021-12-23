@@ -137,22 +137,16 @@ class DataNew:
         generator_eval = DataGenerator(self.file_dict['eval'], seq_length=seq_length, batch_size=batch_size)
         generator_test = DataGenerator(self.file_dict['test'], seq_length=seq_length, batch_size=batch_size)
 
-        # self.generators_dict = {
-        #     'train': (generator_train.generate_batches_x(), generator_train.generate_batches_y()),
-        #     'eval': (generator_eval.generate_batches_x(), generator_eval.generate_batches_y()),
-        #     'test': (generator_test.generate_batches_x(), generator_test.generate_batches_y())
-        # }
-
-        # self.generators_dict = {
-        #     'train': generator_train,
-        #     'eval': generator_eval,
-        #     'test': generator_test
-        # }
         self.generators_dict = {
-            'train': generator_train.generate_batches(),
-            'eval': generator_eval.generate_batches(),
-            'test': generator_test.generate_batches()
+            'train': generator_train,
+            'eval': generator_eval,
+            'test': generator_test
         }
+        # self.generators_dict = {
+        #     'train': generator_train.generate_batches(),
+        #     'eval': generator_eval.generate_batches(),
+        #     'test': generator_test.generate_batches()
+        # }
 
         self._seq_file_name_idx = 0
         self._seq_idx = 0
@@ -243,36 +237,10 @@ class DataGenerator(tf.keras.utils.Sequence):
         self.batch_size = batch_size
         self.files_list = files_list
         self.seq_length = seq_length
-        # self.files_data_dict = {}
-        # self.populate_files_data_list()
-        # self._seq_file_name_idx = 0
-        # self._seq_idx = 0
-        # self.batch_it = 0
-        # self.batch_it_dict = {
-        #     'train': 0,
-        #     'eval': 0,
-        #     'test': 0,
-        # }
-
-    # def populate_files_data_list(self):
-    #     for el in self.files_list:
-    #         data = self._get_seq(el)
-    #         self.files_data_dict[el] = data
-
-
-    # @staticmethod
-    # def concat_parallel(a, b):
-    #     l = np.array(
-    #         [np.concatenate((np.array([x], dtype=np.int32), np.array([y], dtype=np.int32))) for x in a for y in b])
-    #     return tf.convert_to_tensor(l, dtype=tf.int32)
 
     @staticmethod
     def concat_parallel(a, b):
-        a = list(a)
-        b = list(b)
-        z = list(zip(a, b))
-        l = [(tf.convert_to_tensor(np.array([x], dtype=np.int32)),
-              tf.convert_to_tensor(np.array([y], dtype=np.int32))) for x, y in z]
+        l = [(np.array([x], dtype=np.int32),(np.array([y], dtype=np.int32))) for x in a for y in b]
         return l
 
     def generate_batches(self):
@@ -292,8 +260,8 @@ class DataGenerator(tf.keras.utils.Sequence):
             if batches_x.shape[0] / self.batch_size >= 1:
                 concat = DataGenerator.concat_parallel(batches_x[0:self.batch_size], batches_y[0:self.batch_size])
                 yield concat
-                batches_x = batches_x[self.batch_size:]
-                batches_y = batches_y[self.batch_size:]
+                batches_x = batches_x[self.batch_size:-1]
+                batches_y = batches_y[self.batch_size:-1]
 
     def generate_batches_x(self):
         batches_x = np.empty((0, self.seq_length))
@@ -331,36 +299,12 @@ class DataGenerator(tf.keras.utils.Sequence):
                 yield batches_y[0:self.batch_size]
                 # batches_x = batches_x[self.batch_size:-1]
                 batches_y = batches_y[self.batch_size:-1]
-            # for batch in batches:
 
-        # while
-        #     file_it = 0
-    #
-    # def get_next_seq(self):
-    #     for file in self.files_list:
-    #         file_content = self._get_all_seq(file)
-    #         for seq in file_content:
-    #
-    #     while
-    #     file_it = 0
-
-    # def __getitem__(self, index):
-    #
-    #     if index <
-    #     return self.get_next_batch[index]
     def __getitem__(self, index):
         filenames = self.files_list[index*self.batch_size:(index+1)*self.batch_size]
         batchXY = self.seq2seq_batch(filenames, self.batch_size, self.seq_length)
-        # print(f"batchXY: {batchXY.shape}")
-
-        # Find list of IDs
-        # list_IDs_temp = [self.list_IDs[k] for k in indexes]
-        # batch_data = [self._get_seq(file, self.seq_length) for file in filenames]
-        # Generate data
-        # X, y = self.__data_generation(list_IDs_temp)
         x = batchXY[0] #[index]
         y = batchXY[1] #[index]
-        # print(f"x: ${x}")
         return x, y
 
     def __len__(self):
@@ -400,16 +344,6 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         return DataGenerator.reshape_trimmed(data, -1, self.seq_length)
 
-        # if max_length is not None:
-        #     if max_length <= len(data):
-        #         start = random.randrange(0, len(data) - max_length)
-        #         data = data[start:start + max_length]
-        #     else:
-        #         data = np.append(data, par.token_eos)
-        #         while len(data) < max_length:
-        #             data = np.append(data, par.pad_token)
-        # return data
-
     def _get_seq(self, fname, max_length=None):
         with open(fname, 'rb') as f:
             data = pickle.load(f)
@@ -429,53 +363,3 @@ if __name__ == '__main__':
     d = DataNew("midi_processed", 2048, 2)
     for el in d.generators_dict["train"][0]:
         print(el)
-
-    # def count_dict(max_length, data):
-    #     cnt_arr = [0] * max_length
-    #     cnt_dict = {}
-    #     # print(cnt_arr)
-    #     for batch in data:
-    #         for index in batch:
-    #             try:
-    #                 cnt_arr[int(index)] += 1
-    #
-    #             except:
-    #                 print(index)
-    #             try:
-    #                 cnt_dict['index-' + str(index)] += 1
-    #             except KeyError:
-    #                 cnt_dict['index-' + str(index)] = 1
-    #     return cnt_arr
-
-    # print(add_noise(np.array([[1,2,3,3,4,5,6]]), rate=0.2))
-
-    # print(par.vocab_size)
-    # data = Data('dataset/processed')
-    # # ds = DataSequence('dataset/processed', 10, 2048)
-    # sample = data.seq2seq_batch(1000, 100)[0]
-    # pprint.pprint(list(sample))
-    # arr = count_dict(par.vocab_size+3,sample)
-    # pprint.pprint(
-    #     arr)
-    #
-    # from sequence import EventSeq, Event
-    #
-    # event_cnt = {
-    #     'note_on': 0,
-    #     'note_off': 0,
-    #     'velocity': 0,
-    #     'time_shift': 0
-    # }
-    # for event_index in range(len(arr)):
-    #     for event_type, feat_range in EventSeq.feat_ranges().items():
-    #
-    #         if feat_range.start <= event_index < feat_range.stop:
-    #             print(event_type+':'+str(arr[event_index])+' event cnt: '+str(event_cnt))
-    #             event_cnt[event_type] += arr[event_index]
-    #
-    # print(event_cnt)
-
-    # print(np.max(sample), np.min(sample))
-    # print([data._get_seq(file).shape for file in data.files])
-    # while True:
-    # print(ds.__getitem__(10)[1].argmax(-1))

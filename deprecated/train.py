@@ -2,8 +2,8 @@ from model import MusicTransformer
 from custom.layers import *
 from custom import callback
 import params as par
-from tensorflow.python.keras.optimizer_v2.adam import Adam
 from data import Data
+from tensorflow.keras.optimizers import Adam
 import utils
 import argparse
 import datetime
@@ -39,7 +39,7 @@ multi_gpu = args.multi_gpu
 
 
 # load data
-dataset = Data('dataset/processed')
+dataset = Data('midi_processed')
 print(dataset)
 
 

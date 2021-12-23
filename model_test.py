@@ -1,5 +1,5 @@
 import tensorflow
-
+import tensorflow as tf
 from custom.layers import *
 from custom.callback import *
 import params as par
@@ -12,7 +12,7 @@ import json
 import random
 import utils
 from progress.bar import Bar
-tf.executing_eagerly()
+# tf.executing_eagerly()
 
 
 class MusicTransformer(keras.Model):
@@ -29,10 +29,10 @@ class MusicTransformer(keras.Model):
         if loader_path is not None:
             self.load_config_file(loader_path)
 
-        self.Encoder = Encoder(
+        self.encoder = Encoder(
             d_model=self.embedding_dim, input_vocab_size=self.vocab_size,
             num_layers=self.num_layer, rate=dropout, max_len=max_seq)
-        self.Decoder = Decoder(
+        self.decoder = Decoder(
             num_layers=self.num_layer, d_model=self.embedding_dim,
             input_vocab_size=self.vocab_size, rate=dropout, max_len=max_seq)
         self.fc = keras.layers.Dense(self.vocab_size, activation=None, name='output')
@@ -41,12 +41,16 @@ class MusicTransformer(keras.Model):
 
         if loader_path is not None:
             self.load_ckpt_file(loader_path)
+    # def call(self, inputs, training=None, mask=None):
 
-    def call(self, inputs, targets, training=None, eval=None, src_mask=None, trg_mask=None, lookup_mask=None):
-        print(inputs.shape)
-        encoder, weight_encoder = self.Encoder(inputs, training=training, mask=src_mask)
-        decoder, weights = self.Decoder(
-            targets, enc_output=encoder, training=training, lookup_mask=lookup_mask, mask=trg_mask
+    def call(self, inputs, training=None, eval=None, src_mask=None, trg_mask=None, lookup_mask=None):
+        x = inputs[0]
+        y = inputs[1]
+        # print(f"y: {y}")
+        # print(f"inputs2: {inputs.shape}")
+        encoder, weight_encoder = self.encoder(x, training=training, mask=src_mask)
+        decoder, weights = self.decoder(
+            y, enc_output=encoder, training=training, lookup_mask=lookup_mask, mask=trg_mask
         )
 
         fc = self.fc(decoder)
@@ -93,9 +97,8 @@ class MusicTransformer(keras.Model):
     # @tf.function
     def __train_step(self, inp, inp_tar, out_tar, enc_mask, tar_mask, lookup_mask, training):
         with tf.GradientTape() as tape:
-            predictions = self.call(
-                inp, targets=inp_tar, src_mask=enc_mask, trg_mask=tar_mask, lookup_mask=lookup_mask, training=training
-            )
+            predictions = self.call(inp, targets=inp_tar, training=training, src_mask=enc_mask, trg_mask=tar_mask,
+                                    lookup_mask=lookup_mask)
             self.loss_value = self.loss(out_tar, predictions)
         gradients = tape.gradient(self.loss_value, self.trainable_variables)
         self.grad = gradients
@@ -108,11 +111,8 @@ class MusicTransformer(keras.Model):
 
         x, inp_tar, out_tar = MusicTransformer.__prepare_train_data(x, y)
         enc_mask, tar_mask, look_ahead_mask = utils.get_masked_with_pad_tensor(self.max_seq, x, inp_tar)
-        predictions, weights = self.call(
-                x,
-                targets=inp_tar,
-                src_mask=enc_mask,
-                trg_mask=tar_mask, lookup_mask=look_ahead_mask, training=False, eval=True)
+        predictions, weights = self.call(x, targets=inp_tar, training=False, eval=True, src_mask=enc_mask,
+                                         trg_mask=tar_mask, lookup_mask=look_ahead_mask)
         loss = tf.reduce_mean(self.loss(out_tar, predictions))
         result_metric = []
         for metric in self.custom_metrics:
@@ -146,11 +146,8 @@ class MusicTransformer(keras.Model):
         x, inp_tar, out_tar = MusicTransformer.__prepare_train_data(x, y)
 
         enc_mask, tar_mask, look_ahead_mask = utils.get_masked_with_pad_tensor(self.max_seq, x, inp_tar)
-        predictions = self.call(
-            x,
-            targets=inp_tar,
-            src_mask=enc_mask,
-            trg_mask=tar_mask, lookup_mask=look_ahead_mask, training=False)
+        predictions = self.call(x, targets=inp_tar, training=False, src_mask=enc_mask, trg_mask=tar_mask,
+                                lookup_mask=look_ahead_mask)
 
         if mode == 'v':
             return predictions
@@ -186,14 +183,13 @@ class MusicTransformer(keras.Model):
             decode_array = tf.constant([decode_array])
 
             for i in range(min(self.max_seq, length)):
-                print(i)
                 if i % 100 == 0:
                     print('generating... {}% completed'.format((i/min(self.max_seq, length))*100))
                 enc_mask, tar_mask, look_ahead_mask = \
                     utils.get_masked_with_pad_tensor(decode_array.shape[1], prior, decode_array)
 
-                result = self.call(prior, targets=decode_array, src_mask=enc_mask,
-                                    trg_mask=tar_mask, lookup_mask=look_ahead_mask, training=False)
+                result = self.call(prior, targets=decode_array, training=False, src_mask=enc_mask, trg_mask=tar_mask,
+                                   lookup_mask=look_ahead_mask)
                 result = result[:,-1,:]
                 result = tf.reshape(result, (1, -1))
                 result, result_idx = tf.nn.top_k(result, k)
@@ -219,8 +215,8 @@ class MusicTransformer(keras.Model):
                 enc_mask, tar_mask, look_ahead_mask = \
                     utils.get_masked_with_pad_tensor(decode_array.shape[1], prior, decode_array)
 
-                result = self.call(prior, targets=decode_array, src_mask=enc_mask,
-                                    trg_mask=tar_mask, lookup_mask=look_ahead_mask, training=False)
+                result = self.call(prior, targets=decode_array, training=False, src_mask=enc_mask, trg_mask=tar_mask,
+                                   lookup_mask=look_ahead_mask)
                 result = tf.argmax(result, -1)
                 result = tf.cast(result, tf.int32)
                 decode_array = tf.concat([decode_array, tf.expand_dims(result[:, -1], 0)], -1)
@@ -283,15 +279,16 @@ class MusicTransformerDecoder(keras.Model):
             num_layers=self.num_layer, d_model=self.embedding_dim,
             input_vocab_size=self.vocab_size, rate=dropout, max_len=max_seq)
         self.fc = tensorflow.keras.layers.Dense(self.vocab_size, activation=None, name='output')
-
         self._set_metrics()
 
         if loader_path is not None:
             self.load_ckpt_file(loader_path)
 
     def call(self, inputs, training=None, eval=None, lookup_mask=None):
+
         decoder, w = self.decoder(inputs, training=training, mask=lookup_mask)
         fc = self.fc(decoder)
+        # tf.keras.backend.clear_session()
         if training:
             return fc
         elif eval:
@@ -464,17 +461,17 @@ class MusicTransformerDecoder(keras.Model):
                     tf.summary.image('generate_vector', tf.expand_dims(result, -1), i)
                 # import sys
                 # tf.print('[debug out:]', result, sys.stdout )
-                # u = random.uniform(0, 1)
-                # if u > 1:
-                result = tf.argmax(result[:, -1], -1)
-                result = tf.cast(result, tf.int32)
-                decode_array = tf.concat([decode_array, tf.expand_dims(result, -1)], -1)
-                # else:
-                #     pdf = tfp.distributions.Categorical(probs=result[:, -1])
-                #     result = pdf.sample(1)
-                #     result = tf.transpose(result, (1, 0))
-                #     result = tf.cast(result, tf.int32)
-                #     decode_array = tf.concat([decode_array, result], -1)
+                u = random.uniform(0, 1)
+                if u > 1:
+                    result = tf.argmax(result[:, -1], -1)
+                    result = tf.cast(result, tf.int32)
+                    decode_array = tf.concat([decode_array, tf.expand_dims(result, -1)], -1)
+                else:
+                    # pdf = tfp.distributions.Categorical(probs=result[:, -1])
+                    result = pdf.sample(1)
+                    result = tf.transpose(result, (1, 0))
+                    result = tf.cast(result, tf.int32)
+                    decode_array = tf.concat([decode_array, result], -1)
                 # decode_array = tf.concat([decode_array, tf.expand_dims(result[:, -1], 0)], -1)
                 del look_ahead_mask
             decode_array = decode_array[0]

@@ -1,17 +1,13 @@
-# import numpy as np
-# import utils
-# import random
-# files = list(utils.find_files_by_extensions("./midi_processed", ['.pickle']))
-# file_dict = {
-#     'train': files[:int(len(files) * 0.8)],
-#     'eval': files[int(len(files) * 0.8): int(len(files) * 0.9)],
-#     'test': files[int(len(files) * 0.9):],
-# }
-#
-# batch_files1 = random.sample(file_dict["test"], k=1)
-# batch_files2 = random.sample(file_dict["test"], k=1)
-# batch_files3 = random.sample(file_dict["test"], k=1)
-#
-# print(batch_files1)
-# print(batch_files3)
-# print(batch_files2)
+from model import MusicTransformer
+from custom.layers import *
+from custom import callback
+from tensorflow.python import keras
+# import params as par
+import midi_processor.processor as sequence
+from tensorflow.python import enable_eager_execution
+from tensorflow.python.keras.optimizer_v2.adam import Adam
+from data import Data
+import utils
+# tf.executing_eagerly()
+#%%
+print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))

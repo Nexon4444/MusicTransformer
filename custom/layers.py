@@ -3,7 +3,7 @@ import math as m
 from tensorflow import keras
 import numpy as np
 import math
-
+from keras.layers import Dense, LayerNormalization, Dropout
 
 def sinusoid(max_seq, embedding_dim):
     return np.array([[
@@ -272,6 +272,20 @@ class View1D(keras.layers.Layer):
         return inputs[:,self.axis]
 
 
+class FeedForwardLayer(keras.layers.Layer):
+    def __init__(self, layer_input, dropout_rate):
+        super(FeedForwardLayer, self).__init__()
+        self.layer_input = layer_input
+        self.dropout_rate = dropout_rate
+
+    def call(self, x):
+        out = Dense(self.layer_input // 2, activation=tf.nn.relu)(x)
+        out = Dense(self.layer_input)(out)
+        out = Dropout(self.dropout_rate)(out)
+        return out
+
+
+
 class EncoderLayer(keras.layers.Layer):
     def __init__(self, d_model, rate=0.1, h=16, additional=False, max_seq=2048):
         super(EncoderLayer, self).__init__()
@@ -279,23 +293,23 @@ class EncoderLayer(keras.layers.Layer):
         self.d_model = d_model
         self.rga = RelativeGlobalAttention(h=h, d=d_model, max_seq=max_seq, add_emb=additional)
 
-        self.FFN_pre = keras.layers.Dense(self.d_model // 2, activation=tf.nn.relu)
-        self.FFN_suf = keras.layers.Dense(self.d_model)
+        self.ff = FeedForwardLayer(d_model, rate)
 
-        self.layernorm1 = keras.layers.LayerNormalization(epsilon=1e-6)
-        self.layernorm2 = keras.layers.LayerNormalization(epsilon=1e-6)
+        self.layernorm1 = LayerNormalization(epsilon=1e-6)
+        self.layernorm2 = LayerNormalization(epsilon=1e-6)
 
-        self.dropout1 = keras.layers.Dropout(rate)
-        self.dropout2 = keras.layers.Dropout(rate)
+        self.dropout1 = Dropout(rate)
+        self.dropout2 = Dropout(rate)
 
     def call(self, x, mask=None, training=False, **kwargs):
         attn_out, w = self.rga([x,x,x], mask)
         attn_out = self.dropout1(attn_out, training=training)
         out1 = self.layernorm1(attn_out+x)
 
-        ffn_out = self.FFN_pre(out1)
-        ffn_out = self.FFN_suf(ffn_out)
-        ffn_out = self.dropout2(ffn_out, training=training)
+        # ffn_out = self.FFN_pre(out1)
+        # ffn_out = self.FFN_suf(ffn_out)
+        ffn_out = self.ff(out1)
+        # ffn_out = self.dropout2(ffn_out, training=training)
         out2 = self.layernorm2(out1+ffn_out)
         # print(f"out2.shape: {out2.shape}")
         # print(f"w.shape: {w.shape}")
@@ -317,9 +331,9 @@ class DecoderLayer(keras.layers.Layer):
         self.layernorm2 = keras.layers.LayerNormalization(epsilon=1e-6)
         self.layernorm3 = keras.layers.LayerNormalization(epsilon=1e-6)
 
-        self.dropout1 = keras.layers.Dropout(rate)
-        self.dropout2 = keras.layers.Dropout(rate)
-        self.dropout3 = keras.layers.Dropout(rate)
+        self.dropout1 = Dropout(rate)
+        self.dropout2 = Dropout(rate)
+        self.dropout3 = Dropout(rate)
 
     def call(self, x, encode_out, mask=None, lookup_mask=None, training=False, w_out=False, **kwargs):
         attn_out, aw1 = self.rga([x, x, x], mask=lookup_mask)
@@ -358,7 +372,7 @@ class Encoder(keras.layers.Layer):
             self.pos_encoding = DynamicPositionEmbedding(self.d_model, max_seq=max_len)
 
         self.enc_layers = [EncoderLayer(d_model, rate, h=self.d_model // 64, additional=False, max_seq=max_len)
-                           for i in range(num_layers)]
+                           for _ in range(num_layers)]
         self.dropout = keras.layers.Dropout(rate)
 
     def call(self, x, mask=None, training=False):

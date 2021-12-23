@@ -186,7 +186,6 @@ class MusicTransformer(keras.Model):
             decode_array = tf.constant([decode_array])
 
             for i in range(min(self.max_seq, length)):
-                print(i)
                 if i % 100 == 0:
                     print('generating... {}% completed'.format((i/min(self.max_seq, length))*100))
                 enc_mask, tar_mask, look_ahead_mask = \
@@ -464,17 +463,17 @@ class MusicTransformerDecoder(keras.Model):
                     tf.summary.image('generate_vector', tf.expand_dims(result, -1), i)
                 # import sys
                 # tf.print('[debug out:]', result, sys.stdout )
-                # u = random.uniform(0, 1)
-                # if u > 1:
-                result = tf.argmax(result[:, -1], -1)
-                result = tf.cast(result, tf.int32)
-                decode_array = tf.concat([decode_array, tf.expand_dims(result, -1)], -1)
-                # else:
-                #     pdf = tfp.distributions.Categorical(probs=result[:, -1])
-                #     result = pdf.sample(1)
-                #     result = tf.transpose(result, (1, 0))
-                #     result = tf.cast(result, tf.int32)
-                #     decode_array = tf.concat([decode_array, result], -1)
+                u = random.uniform(0, 1)
+                if u > 1:
+                    result = tf.argmax(result[:, -1], -1)
+                    result = tf.cast(result, tf.int32)
+                    decode_array = tf.concat([decode_array, tf.expand_dims(result, -1)], -1)
+                else:
+                    # pdf = tfp.distributions.Categorical(probs=result[:, -1])
+                    result = pdf.sample(1)
+                    result = tf.transpose(result, (1, 0))
+                    result = tf.cast(result, tf.int32)
+                    decode_array = tf.concat([decode_array, result], -1)
                 # decode_array = tf.concat([decode_array, tf.expand_dims(result[:, -1], 0)], -1)
                 del look_ahead_mask
             decode_array = decode_array[0]

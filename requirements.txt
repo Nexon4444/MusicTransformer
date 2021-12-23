@@ -116,3 +116,4 @@ Werkzeug==2.0.2
 wrapt==1.13.3
 xkit==0.0.0
 zipp==3.6.0
+numba
