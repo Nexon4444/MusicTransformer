@@ -241,14 +241,6 @@ class MusicTransformer(keras.Model):
     @staticmethod
     def __prepare_train_data(x, y):
         start_token = tf.ones((y.shape[0], 1), dtype=y.dtype) * par.token_sos
-        # end_token = tf.ones((y.shape[0], 1), dtype=y.dtype) * par.token_eos
-
-        # # method with eos
-        # out_tar = tf.concat([y[:, :-1], end_token], -1)
-        # inp_tar = tf.concat([start_token, y[:, :-1]], -1)
-        # x = tf.concat([start_token, x[:, 2:], end_token], -1)
-
-        # method without eos
         out_tar = y
         inp_tar = y[:, :-1]
         # inp_tar = data.add_noise(inp_tar, rate=0)
